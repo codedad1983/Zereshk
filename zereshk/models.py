@@ -26,3 +26,7 @@ class Download(peewee.Model):
     username = peewee.CharField(null=True)
     password = peewee.CharField(null=True)
     account = peewee.ForeignKeyField(DownloadAccount, related_name='downloads', null=True)
+
+    @property
+    def name(self):
+        return self.path

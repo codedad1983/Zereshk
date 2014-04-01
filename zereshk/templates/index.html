@@ -1,1 +1,32 @@
 {% extends "main.html" %}
+
+{% block content %}
+	<h2>Downloads</h2>
+		<table class="table table-hover">
+	      <thead>
+	        <tr>
+	          <th>#</th>
+	          <th>Name</th>
+	          <th>status</th>
+	          <th>Percent</th>
+	          <th>Size</th>
+	          <th>Speed</th>
+	          <th>Est. Time</th>
+	        </tr>
+	      </thead>
+
+	      <tbody>
+	      	{% for dl in downloads %}
+		        <tr>
+		          <td>{{ loop.index }}</td>
+		          <td>{{ dl.name }}</td>
+		          <td>*</td>
+		          <td>@mdo</td>
+		          <td>@mdo</td>
+		          <td>@mdo</td>
+		          <td>@mdo</td>
+		        </tr>
+			{% endfor %}
+	      </tbody>
+	    </table>
+{% endblock content %}
