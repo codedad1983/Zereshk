@@ -37,7 +37,7 @@ def after_request(response):
 def create_database():
     Download.create_table()
     DownloadAccount.create_table()
-    return 'OK'
+    return redirect('/')
 
 
 @app.route('/account/new/', methods=['POST', 'GET'])
@@ -58,7 +58,17 @@ def new_download():
         path = request.form.get('path')
         username = request.form.get('username')
         password = request.form.get('password')
+        dl_account = request.form.get('dl_account')
+
         dl = Download(url=dl_url, path=path)
+        if username:
+            dl.username = username
+        if password:
+            dl.password = password
+
+        if dl_account != 'None':
+            dl.account = DownloadAccount.select().where(DownloadAccount.pk==int(dl_account))[0]
+
         dl.save()
         return redirect(url_for('index'))
     return render_template('new_download.html', dl_accounts=DownloadAccount.select())

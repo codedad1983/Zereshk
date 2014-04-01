@@ -19,10 +19,10 @@ class Download(peewee.Model):
     class Meta:
             database = database
 
-    pk = peewee.CharField(primary_key=True)
+    pk = peewee.PrimaryKeyField()
     pid = peewee.IntegerField(null=True)
     url = peewee.TextField()
     path = peewee.TextField()
-    user = peewee.CharField(null=True)
+    username = peewee.CharField(null=True)
     password = peewee.CharField(null=True)
     account = peewee.ForeignKeyField(DownloadAccount, related_name='downloads', null=True)
