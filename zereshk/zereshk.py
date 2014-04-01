@@ -9,7 +9,7 @@
     :license: BSD, see LICENSE for more details.
 """
 
-from flask import Flask, render_template, request, redirect, url_for, g
+from flask import Flask, render_template, request, redirect, url_for, g, flash
 from models import database, Download, DownloadAccount
 
 app = Flask(__name__)
@@ -47,6 +47,7 @@ def new_account():
         username = request.form.get('username')
         password = request.form.get('password')
         DownloadAccount(name=name, username=username, password=password).save()
+        flash('New account created successfully.', 'alert-success')
         return redirect(url_for('index'))
     return render_template('new_account.html')
 
@@ -70,6 +71,7 @@ def new_download():
             dl.account = DownloadAccount.select().where(DownloadAccount.pk==int(dl_account))[0]
 
         dl.save()
+        flash('New download added successfully.', 'alert-success')
         return redirect(url_for('index'))
     return render_template('new_download.html', dl_accounts=DownloadAccount.select())
 
