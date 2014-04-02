@@ -55,8 +55,8 @@ def new_account():
 @app.route('/download/new/', methods=['POST', 'GET'])
 def new_download():
     if request.method == 'POST':
-        dl_url = request.form.get('dl_url')
-        path = request.form.get('path')
+        dl_url = request.form.get('dl_url').strip()
+        path = request.form.get('path').strip()
         username = request.form.get('username')
         password = request.form.get('password')
         dl_account = request.form.get('dl_account')
@@ -78,6 +78,8 @@ def new_download():
 
 @app.route('/')
 def index():
+    dl = Download.select()[0]
+    dl.start()
     return render_template('index.html', downloads=Download.select())
 
 
