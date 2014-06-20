@@ -4,6 +4,12 @@ import threading
 import config
 from subprocess import Popen, PIPE
 from time import sleep
+import zmq
+from Queue import Queue
+
+
+pool = dict()
+lock = threading.Lock()
 
 
 class DownloadInfo(object):
@@ -66,7 +72,7 @@ def wget_command(dl_data, resume=True):
     wget_opts = ['wget']
     if resume:
         wget_opts += ['-c']
-    cmd = wget_opts + ['-P %s' % config.PATH_WORK, dl_data.link]
+    cmd = wget_opts + ['-P%s' % config.PATH_WORK, dl_data.link]
     return cmd
 
 
@@ -101,19 +107,52 @@ class DownloadThread(threading.Thread):
         self.done = True
 
 
-class ThreadedDownloadManager(object):
-    pool = {}
-
-    def add_download(self, link, username=None, password=None):
-        dl_info = DownloadInfo(link, username, password)
-        dl = DownloadThread(dl_info)
-        dl.start()
-        self.pool[dl.data.key] = dl
+class NewDownloadServer(threading.Thread):
+    def __init__(self, queue):
+        super(NewDownloadServer, self).__init__()
+        self.queue = queue
+        self.stop_flag = False
+        context = zmq.Context()
+        self.socket = context.socket(zmq.REP)
+        self.socket.bind("tcp://*:%s" % 7766)
 
     def run(self):
+        print 'Running new download server ...'
+        while not self.stop_flag:
+            req = self.socket.recv_json()
+            print 'New Download request ...'
+            self.queue.put(req)
+            self.socket.send('OK')
+
+
+class ThreadedDownloadManager(threading.Thread):
+    def __init__(self, queue):
+        super(ThreadedDownloadManager, self).__init__()
+        self.queue = queue
+        self.stop_flag = False
+
+    def run(self):
+        print 'Download Manager Started ...'
         while True:
-            sleep(1)
+            if self.stop_flag:
+                self.stop_downlods()
+                break
+
+            while not self.queue.empty():
+                req = self.queue.get()
+                dl_info = DownloadInfo(req['link'], req.get('username'), req.get('password'))
+                print dl_info
+                dl = DownloadThread(dl_info)
+                dl.start()
+                self.pool[dl.data.key] = dl
+
+    def stop_downlods(self):
+        pass
 
 if __name__ == '__main__':
-    tdm = ThreadedDownloadManager()
-    tdm.start_new_download('http://flask.pocoo.org/docs/flask-docs.pdf')
+    queue = Queue()
+    tdm = ThreadedDownloadManager(queue)
+    nds = NewDownloadServer(queue)
+    tdm.start()
+    nds.start()
+    tdm.join()
