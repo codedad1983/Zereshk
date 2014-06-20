@@ -78,8 +78,6 @@ def new_download():
 
 @app.route('/')
 def index():
-    dl = Download.select()[0]
-    dl.start()
     return render_template('index.html', downloads=Download.select())
 
 

@@ -1,5 +1,7 @@
 DEBUG = True
 SECRET_KEY = 'secret_key'
 
-PIDFILE_PATH = '/var/run/zereshk/'
-LOG_PATH = '/var/log/zereshk/'
+PATH_PIDFILE = '/var/run/zereshk/'
+PATH_WORK = '/tmp/zeresh_work/'
+PATH_DONE = '/tmp/zereshk_done/'
+FAILED_RETRY = 5
