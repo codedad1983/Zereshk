@@ -73,12 +73,13 @@ def wget_command(dl_data, resume=True):
 
 
 class DownloadThread(threading.Thread):
-    def __init__(self, dl_info):
+    def __init__(self, dl_info, download_stop_handler):
         super(DownloadThread, self).__init__()
         self.data = dl_info
         self.stop_flag = False
         self.done = False
         self.status = WgetOutputHandler()
+        self.download_stop_handler = download_stop_handler
 
     def run(self):
         print 'Starting download'
@@ -91,7 +92,7 @@ class DownloadThread(threading.Thread):
 #             print self.data.key, 'Going to read new data from WGET output'
             self.status.process(pipe_out.readline().strip())
 #             print self.data.key, 'WGET output processed. sleeping ...'
-            sleep(0.001)
+            sleep(0.01)
 
         # TODO: handle this
         # wget print some errors and outputs by stdout
@@ -101,6 +102,7 @@ class DownloadThread(threading.Thread):
             pipe.kill()
 
         self.done = True
+        self.download_stop_handler(self.data.key)
 
 
 class AdminServer(threading.Thread):
@@ -139,11 +141,15 @@ class DownloadManager(threading.Thread):
                 req = self.queue.get()
                 dl_info = DownloadInfo(req['link'], req.get('username'), req.get('password'))
                 print dl_info
-                dl = DownloadThread(dl_info)
+                dl = DownloadThread(dl_info, self.download_stop_handler)
                 dl.start()
                 self.pool[dl.data.key] = dl
 
             sleep(2)
+
+    def download_stop_handler(self, key):
+        print '**** Download stoped. Going to handle it ...', key
+        del self.pool[key]
 
     def stop_downlods(self):
         pass
