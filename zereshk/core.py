@@ -8,10 +8,6 @@ import zmq
 from Queue import Queue
 
 
-pool = dict()
-lock = threading.Lock()
-
-
 class DownloadInfo(object):
     def __init__(self, link, username, password):
         self.key = str(uuid4())
@@ -55,8 +51,8 @@ class WgetOutputHandler(object):
         elif (s.find('416 Requested Range Not Satisfiable')):
             self.error = ('416_1', 'Requested Range Not Satisfiable')
 
-        print self.to_string()
-        print '='*20
+#         print self.to_string()
+#         print '='*20
 
     def to_string(self):
         return ('\n\t' + self.target+'\n\t'
@@ -107,9 +103,9 @@ class DownloadThread(threading.Thread):
         self.done = True
 
 
-class NewDownloadServer(threading.Thread):
+class AdminServer(threading.Thread):
     def __init__(self, queue):
-        super(NewDownloadServer, self).__init__()
+        super(AdminServer, self).__init__()
         self.queue = queue
         self.stop_flag = False
         context = zmq.Context()
@@ -125,10 +121,11 @@ class NewDownloadServer(threading.Thread):
             self.socket.send('OK')
 
 
-class ThreadedDownloadManager(threading.Thread):
-    def __init__(self, queue):
-        super(ThreadedDownloadManager, self).__init__()
+class DownloadManager(threading.Thread):
+    def __init__(self, queue, pool):
+        super(DownloadManager, self).__init__()
         self.queue = queue
+        self.pool = pool
         self.stop_flag = False
 
     def run(self):
@@ -146,13 +143,41 @@ class ThreadedDownloadManager(threading.Thread):
                 dl.start()
                 self.pool[dl.data.key] = dl
 
+            sleep(2)
+
     def stop_downlods(self):
         pass
 
-if __name__ == '__main__':
+
+class StatusServer(threading.Thread):
+    def __init__(self, pool):
+        super(StatusServer, self).__init__()
+        self.pool = pool
+        self.stop_flag = False
+
+    def run(self):
+        while not self.stop_flag:
+            print 'ZSS:', self.pool
+
+            sleep(2)
+
+
+class ZereshkThreadedServer(object):
     queue = Queue()
-    tdm = ThreadedDownloadManager(queue)
-    nds = NewDownloadServer(queue)
-    tdm.start()
-    nds.start()
-    tdm.join()
+    pool = dict()
+
+    def __init__(self):
+        self.download_manager = DownloadManager(self.queue, self.pool)
+        self.status_server = StatusServer(self.pool)
+        self.admin_server = AdminServer(self.queue)
+
+    def run(self):
+        self.download_manager.start()
+        self.admin_server.start()
+        self.status_server.start()
+
+        self.download_manager.join()
+
+if __name__ == '__main__':
+    zts = ZereshkThreadedServer()
+    zts.run()
