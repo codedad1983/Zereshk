@@ -131,17 +131,28 @@ class DownloadManager(threading.Thread):
                 dl.link = req['link']
                 dl.username = req.get('username')
                 dl.password = req.get('password')
-                dl.save()
+                dl.save(force_insert=True)
+                print dl
+                if len(self.pool) < config.MAX_JOBS:
+                    self.start_new_download(dl)
 
             sleep(2)
 
-    def start_new_download(self, dl):
-        dl = DownloadThread(dl, self.download_stop_handler)
+    def start_new_download(self, dl_info):
+        dl = DownloadThread(dl_info, self.download_stop_handler)
         dl.start()
+        dl_info.status = 'running'
+        dl_info.save()
         self.pool[dl.data.key] = dl
 
     def download_stop_handler(self, key):
         print '**** Download stopped. Going to handle it ...', key
+        try:
+            dl_info = Download.get(Download.key == key)
+            dl_info.status = 'Finished'
+            dl_info.save()
+        except:
+            print 'Problem in updating download info'
         del self.pool[key]
 
     def stop_downlods(self):
