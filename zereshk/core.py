@@ -1,4 +1,3 @@
-import os
 from uuid import uuid4
 import threading
 import config
@@ -6,18 +5,7 @@ from subprocess import Popen, PIPE
 from time import sleep
 import zmq
 from Queue import Queue
-
-
-class DownloadInfo(object):
-    def __init__(self, link, username, password):
-        self.key = str(uuid4())
-        self.link = link
-        self.username = username
-        self.password = password
-
-    @property
-    def log_path(self):
-        return os.path.join(config.PATH_LOG, '%s.log' % self.key)
+from models import Download
 
 
 class WgetOutputHandler(object):
@@ -55,27 +43,27 @@ class WgetOutputHandler(object):
 #         print '='*20
 
     def to_string(self):
-        return ('\n\t' + self.target+'\n\t'
-            +self.total_size+'\n\t'
-            +self.downloaded_size+'\n\t'
-            +self.ip+'\n\t'
-            +self.percent+'\n\t'
-            +self.speed+'\n\t'
-            +self.time_left)
+        return ('\n\t' + self.target + '\n\t'
+            + self.total_size + '\n\t'
+            + self.downloaded_size + '\n\t'
+            + self.ip + '\n\t'
+            + self.percent + '\n\t'
+            + self.speed + '\n\t'
+            + self.time_left)
 
 
-def wget_command(dl_data, resume=True):
+def wget_command(dl, resume=True):
     wget_opts = ['wget']
     if resume:
         wget_opts += ['-c']
-    cmd = wget_opts + ['-P%s' % config.PATH_WORK, dl_data.link]
+    cmd = wget_opts + ['-P%s' % config.PATH_WORK, dl.link]
     return cmd
 
 
 class DownloadThread(threading.Thread):
-    def __init__(self, dl_info, download_stop_handler):
+    def __init__(self, dl, download_stop_handler):
         super(DownloadThread, self).__init__()
-        self.data = dl_info
+        self.data = dl
         self.stop_flag = False
         self.done = False
         self.status = WgetOutputHandler()
@@ -139,16 +127,21 @@ class DownloadManager(threading.Thread):
 
             while not self.queue.empty():
                 req = self.queue.get()
-                dl_info = DownloadInfo(req['link'], req.get('username'), req.get('password'))
-                print dl_info
-                dl = DownloadThread(dl_info, self.download_stop_handler)
-                dl.start()
-                self.pool[dl.data.key] = dl
+                dl = Download()
+                dl.link = req['link']
+                dl.username = req.get('username')
+                dl.password = req.get('password')
+                dl.save()
 
             sleep(2)
 
+    def start_new_download(self, dl):
+        dl = DownloadThread(dl, self.download_stop_handler)
+        dl.start()
+        self.pool[dl.data.key] = dl
+
     def download_stop_handler(self, key):
-        print '**** Download stoped. Going to handle it ...', key
+        print '**** Download stopped. Going to handle it ...', key
         del self.pool[key]
 
     def stop_downlods(self):
@@ -185,5 +178,11 @@ class ZereshkThreadedServer(object):
         self.download_manager.join()
 
 if __name__ == '__main__':
-    zts = ZereshkThreadedServer()
-    zts.run()
+    import sys
+    if len(sys.argv) > 1:
+        cmd = sys.argv[1]
+        if cmd == 'createdb':
+            Download.create_table()
+        elif cmd == 'run':
+            zts = ZereshkThreadedServer()
+            zts.run()
