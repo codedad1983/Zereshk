@@ -16,11 +16,11 @@ database = peewee.SqliteDatabase('zereshk.db3')
 #     username = peewee.CharField()
 #     password = peewee.CharField()
 
-STATUS_TYPES = (('running', 'Running'),
-                ('waiting', 'Waiting'),
-                ('finished', 'Finished'),
-                ('paused', 'Paused'),
-                ('failed', 'Failed'))
+STATUS_TYPES = (('r', 'Running'),
+                ('w', 'Waiting'),
+                ('f', 'Finished'),
+                ('p', 'Paused'),
+                ('e', 'Failed'))
 
 
 class Download(peewee.Model):
@@ -28,7 +28,8 @@ class Download(peewee.Model):
             database = database
 
     key = peewee.CharField(primary_key=True, default=str(uuid4()))
-    status = peewee.CharField(max_length=25, choices=STATUS_TYPES, default='waiting')
+    status = peewee.CharField(max_length=2, choices=STATUS_TYPES, default='waiting')
+    hidden = peewee.BooleanField(default=False)
     link = peewee.TextField()
     username = peewee.CharField(null=True)
     password = peewee.CharField(null=True)
